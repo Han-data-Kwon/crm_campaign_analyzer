@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM 캠페인 성과 분석기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232638;
+    --border: #2e3149;
+    --accent: #5b6af5;
+    --accent2: #7ee8a2;
+    --accent3: #f7c948;
+    --danger: #f4655a;
+    --text: #e8eaf2;
+    --text2: #8b8fa8;
+    --text3: #5a5e77;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Pretendard', -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -.01em;
+  }
+  .header-sub {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* ── Layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 57px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+  label span.req { color: var(--accent); margin-left: 2px; }
+  label span.opt { color: var(--text3); font-size: 10px; margin-left: 4px; }
+
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+
+  .file-drop {
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 20px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    position: relative;
+  }
+  .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(91,106,245,.05); }
+  .file-drop input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .file-drop-icon { font-size: 22px; margin-bottom: 6px; }
+  .file-drop-text { font-size: 12px; color: var(--text2); }
+  .file-drop-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .file-name { font-size: 12px; color: var(--accent2); margin-top: 6px; font-family: var(--mono); }
+
+  .btn-run {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    margin-top: 8px;
+    letter-spacing: -.01em;
+  }
+  .btn-run:hover { background: #4a59e0; }
+  .btn-run:active { transform: scale(.98); }
+  .btn-run:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+
+  .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* ── Content ── */
+  .content {
+    overflow-y: auto;
+    padding: 28px 32px;
+    background: var(--bg);
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--text3);
+    gap: 12px;
+  }
+  .empty-icon { font-size: 48px; opacity: .3; }
+  .empty-text { font-size: 14px; }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--kpi-color, var(--accent));
+  }
+  .kpi-label { font-size: 11px; color: var(--text2); font-weight: 500; margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; font-family: var(--mono); letter-spacing: -.02em; }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* ── Section header ── */
+  .sec-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    margin-top: 28px;
+  }
+  .sec-header h2 { font-size: 13px; font-weight: 600; color: var(--text2); letter-spacing: .04em; text-transform: uppercase; }
+  .sec-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    background: var(--surface);
+    color: var(--text3);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(46,49,73,.5);
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(91,106,245,.04); }
+  .num { font-family: var(--mono); text-align: right; }
+  .badge-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* ── Report box ── */
+  .report-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+  }
+  .report-content {
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    font-family: var(--sans);
+  }
+  .report-content.streaming { opacity: .85; }
+  .report-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+  .btn-sm {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-sm:hover { background: var(--border); color: var(--text); }
+
+  /* ── Loading ── */
+  .loading-bar {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-bottom: 14px;
+  }
+
+  /* chart mini bar */
+  .mini-bar-bg { background: var(--surface2); border-radius: 3px; height: 6px; margin-top: 4px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">ES사업부</div>
+  <h1>CRM 캠페인 성과 자동 분석기</h1>
+  <div class="header-sub">B2B OTA · CRM ROI Analyzer</div>
+</div>
+
+<div class="main">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="section-label">캠페인 정보</div>
+
+    <div class="form-group">
+      <label>캠페인명 <span class="req">*</span></label>
+      <input type="text" id="campaignName" placeholder="예) 2025년 4월 재활성화 CRM">
+    </div>
+
+    <div class="form-group">
+      <label>발송 목적 <span class="req">*</span></label>
+      <select id="purpose">
+        <option value="">— 선택하세요 —</option>
+        <option>리텐션</option>
+        <option>첫결제</option>
+        <option>재활성화</option>
+        <option>유상소진</option>
+        <option>기타(영업지원)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>발송 내용 <span class="req">*</span></label>
+      <textarea id="content" placeholder="발송된 메시지 내용, 혜택, 타겟 조건 등을 입력하세요"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>발송 건수 <span class="req">*</span></label>
+      <input type="number" id="sendCount" placeholder="예) 15000" min="1">
+    </div>
+
+    <div class="form-group">
+      <label>쿠폰 번호 <span class="opt">선택 · 쉼표로 구분</span></label>
+      <input type="text" id="couponNos" placeholder="예) CP202504001, CP202504002">
+    </div>
+
+    <hr class="sidebar-divider">
+    <div class="section-label">CRM Raw 데이터</div>
+
+    <div class="file-drop" id="fileDrop">
+      <input type="file" accept=".csv" id="csvFile">
+      <div class="file-drop-icon">📂</div>
+      <div class="file-drop-text">CSV 파일을 끌어다 놓거나 클릭</div>
+      <div class="file-drop-sub">구매 전환 예약 raw · EUC-KR / UTF-8</div>
+      <div class="file-name hidden" id="fileName"></div>
+    </div>
+
+    <button class="btn-run" id="runBtn" disabled>분석 실행</button>
+  </aside>
+
+  <!-- ── CONTENT ── -->
+  <main class="content" id="content-area">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📊</div>
+      <div class="empty-text">캠페인 정보와 CSV를 입력하고 분석을 실행하세요</div>
+    </div>
+
+    <div id="resultArea" class="hidden">
+      <!-- KPI Cards -->
+      <div class="sec-header"><h2>핵심 지표</h2><div class="sec-line"></div></div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- Segment Tables -->
+      <div id="segmentArea"></div>
+
+      <!-- AI Report -->
+      <div class="sec-header"><h2>AI 보고서 초안</h2><div class="sec-line"></div></div>
+      <div class="report-box">
+        <div class="status-chip hidden" id="genStatus"><span class="spinner"></span>Claude가 분석 중입니다...</div>
+        <div class="loading-bar hidden" id="loadingBar"></div>
+        <div class="report-content" id="reportContent"></div>
+        <div class="report-toolbar">
+          <button class="btn-sm" id="copyBtn">📋 복사</button>
+          <button class="btn-sm" id="regenBtn">↻ 재생성</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let parsedRows = [];
+let lastMetrics = null;
+let lastInput = null;
+
+// ── Encoding detect + parse ──
+function parseCSV(buffer) {
+  let text;
+  try {
+    const decoder = new TextDecoder('euc-kr');
+    text = decoder.decode(buffer);
+    if (text.includes('â€') || text.includes('\uFFFD')) throw new Error();
+  } catch {
+    text = new TextDecoder('utf-8').decode(buffer);
+  }
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (vals[i] || '').trim());
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function splitCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── File handling ──
+const csvFileInput = document.getElementById('csvFile');
+const fileDrop = document.getElementById('fileDrop');
+const fileNameEl = document.getElementById('fileName');
+
+csvFileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await loadFile(file);
+});
+
+fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag'); });
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag'));
+fileDrop.addEventListener('drop', async e => {
+  e.preventDefault(); fileDrop.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) await loadFile(file);
+});
+
+async function loadFile(file) {
+  const buf = await file.arrayBuffer();
+  parsedRows = parseCSV(buf);
+  fileNameEl.textContent = `✓ ${file.name}  (${parsedRows.length.toLocaleString()}건)`;
+  fileNameEl.classList.remove('hidden');
+  checkReady();
+}
+
+// ── Form ready check ──
+['campaignName','purpose','content','sendCount'].forEach(id => {
+  document.getElementById(id).addEventListener('input', checkReady);
+});
+document.getElementById('purpose').addEventListener('change', checkReady);
+
+function checkReady() {
+  const ok = document.getElementById('campaignName').value.trim()
+    && document.getElementById('purpose').value
+    && document.getElementById('content').value.trim()
+    && document.getElementById('sendCount').value > 0
+    && parsedRows.length > 0;
+  document.getElementById('runBtn').disabled = !ok;
+}
+
+// ── Compute metrics ──
+function computeMetrics() {
+  const sendCount = parseInt(document.getElementById('sendCount').value) || 0;
+  const couponRaw = document.getElementById('couponNos').value.trim();
+  const couponNos = couponRaw ? couponRaw.split(',').map(c => c.trim().toUpperCase()).filter(Boolean) : [];
+
+  const SEND_COST_PER = 23.1;
+
+  // Filter status=결제 only (if exists)
+  const converted = parsedRows.filter(r => {
+    const s = (r.status || '').trim();
+    return !s || s === '결제' || s === '결제완료' || s === 'Y';
+  });
+
+  const gmvTotal = converted.reduce((s, r) => s + (parseFloat(r.gmv) || 0), 0);
+  const convCount = converted.length;
+  const convRate = sendCount > 0 ? (convCount / sendCount * 100) : 0;
+
+  // 발송 비용
+  const sendCost = sendCount * SEND_COST_PER;
+
+  // 쿠폰 비용
+  let couponCost = 0;
+  if (couponNos.length > 0) {
+    converted.forEach(r => {
+      const baseCpn = (r.base_cpn_no || '').trim().toUpperCase();
+      const dupCpn = (r.dup_cpn_no || '').trim().toUpperCase();
+      if (couponNos.includes(baseCpn)) couponCost += parseFloat(r.base_dc_cp_amt) || 0;
+      if (couponNos.includes(dupCpn)) couponCost += parseFloat(r.dup_dc_cp_amt) || 0;
+    });
+  }
+
+  const totalCost = sendCost + couponCost;
+  const roi = totalCost > 0 ? ((gmvTotal - totalCost) / totalCost * 100) : null;
+  const gmvPerConv = convCount > 0 ? gmvTotal / convCount : 0;
+
+  // Segment: area1
+  const areaMap = {};
+  converted.forEach(r => {
+    const k = r.area1 || '미상';
+    if (!areaMap[k]) areaMap[k] = { count: 0, gmv: 0 };
+    areaMap[k].count++;
+    areaMap[k].gmv += parseFloat(r.gmv) || 0;
+  });
+
+  // Segment: seg1_name
+  const catMap = {};
+  converted.forEach(r => {
+    const k = r.seg1_name || '미상';
+    if (!catMap[k]) catMap[k] = { count: 0, gmv: 0 };
+    catMap[k].count++;
+    catMap[k].gmv += parseFloat(r.gmv) || 0;
+  });
+
+  // Segment: event_name (첫결제/재결제)
+  const eventMap = {};
+  converted.forEach(r => {
+    const k = r.event_name || '미상';
+    if (!eventMap[k]) eventMap[k] = 0;
+    eventMap[k]++;
+  });
+
+  // Segment: biztrip
+  const bizMap = {};
+  converted.forEach(r => {
+    const k = r.biztrip || '미상';
+    if (!bizMap[k]) bizMap[k] = { count: 0, gmv: 0 };
+    bizMap[k].count++;
+    bizMap[k].gmv += parseFloat(r.gmv) || 0;
+  });
+
+  // Top 10 companies
+  const compMap = {};
+  converted.forEach(r => {
+    const k = r.company_name || '개인/미상';
+    if (!compMap[k]) compMap[k] = { count: 0, gmv: 0 };
+    compMap[k].count++;
+    compMap[k].gmv += parseFloat(r.gmv) || 0;
+  });
+  const topCompanies = Object.entries(compMap).sort((a, b) => b[1].gmv - a[1].gmv).slice(0, 10);
+
+  return {
+    sendCount, convCount, convRate, gmvTotal, gmvPerConv,
+    sendCost, couponCost, totalCost, roi,
+    couponNos,
+    areaMap: Object.entries(areaMap).sort((a,b)=>b[1].gmv-a[1].gmv),
+    catMap: Object.entries(catMap).sort((a,b)=>b[1].gmv-a[1].gmv),
+    eventMap: Object.entries(eventMap),
+    bizMap: Object.entries(bizMap).sort((a,b)=>b[1].gmv-a[1].gmv),
+    topCompanies,
+  };
+}
+
+// ── Render KPIs ──
+function renderKPIs(m) {
+  const fmt = n => n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 1e4 ? (n/1e4).toFixed(0)+'만' : n.toLocaleString();
+  const cards = [
+    { label: '발송 건수', value: m.sendCount.toLocaleString(), sub: '건', color: '#8b8fa8' },
+    { label: '전환 건수', value: m.convCount.toLocaleString(), sub: '건 (구매 완료)', color: '#5b6af5' },
+    { label: '전환율', value: m.convRate.toFixed(2)+'%', sub: '전환/발송', color: '#7ee8a2' },
+    { label: 'GMV', value: fmt(m.gmvTotal), sub: '원', color: '#7ee8a2' },
+    { label: '건당 GMV', value: fmt(m.gmvPerConv), sub: '원/건', color: '#a78bfa' },
+    { label: '발송 비용', value: fmt(m.sendCost), sub: '원 (23.1원/건)', color: '#f7c948' },
+    { label: '쿠폰 비용', value: m.couponNos.length > 0 ? fmt(m.couponCost) : '미입력', sub: m.couponNos.length > 0 ? '원' : '쿠폰번호 없음', color: '#f4a15a' },
+    { label: '총 비용', value: fmt(m.totalCost), sub: '원', color: '#f4655a' },
+    { label: 'ROI', value: m.roi !== null ? m.roi.toFixed(1)+'%' : '—', sub: '(GMV-비용)/비용', color: m.roi > 0 ? '#7ee8a2' : '#f4655a' },
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+    <div class="kpi-card" style="--kpi-color:${c.color}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="color:${c.color}">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ── Render Segments ──
+function renderSegments(m) {
+  const el = document.getElementById('segmentArea');
+  const maxGmv = v => Math.max(...v.map(x=>x[1].gmv||x[1]||0));
+
+  const tableArea = (title, rows, maxVal) => `
+    <div class="sec-header"><h2>${title}</h2><div class="sec-line"></div></div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>구분</th><th class="num">전환 건수</th><th class="num">GMV</th><th style="width:120px">비중</th></tr></thead>
+      <tbody>${rows.map(([k, v]) => {
+        const pct = maxVal > 0 ? (v.gmv / maxVal * 100) : 0;
+        const fmtG = v.gmv >= 1e8 ? (v.gmv/1e8).toFixed(1)+'억' : v.gmv >= 1e4 ? (v.gmv/1e4).toFixed(0)+'만' : v.gmv.toLocaleString();
+        return `<tr>
+          <td>${k}</td>
+          <td class="num">${v.count.toLocaleString()}</td>
+          <td class="num" style="color:#7ee8a2">${fmtG}원</td>
+          <td><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%"></div></div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+
+  const areaMax = Math.max(...m.areaMap.map(x=>x[1].gmv));
+  const catMax = Math.max(...m.catMap.map(x=>x[1].gmv));
+  const bizMax = Math.max(...m.bizMap.map(x=>x[1].gmv));
+  const compMax = Math.max(...m.topCompanies.map(x=>x[1].gmv));
+
+  // event_name 분포 (bar)
+  const totalEvt = Object.values(m.eventMap).reduce((s,v)=>s+v,0);
+  const evtHtml = `
+    <div class="sec-header"><h2>결제 타입 분포</h2><div class="sec-line"></div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>타입</th><th class="num">건수</th><th style="width:120px">비중</th></tr></thead>
+      <tbody>${m.eventMap.map(([k,v])=>`<tr>
+        <td>${k}</td><td class="num">${v.toLocaleString()}</td>
+        <td><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${(v/totalEvt*100).toFixed(1)}%;background:#a78bfa"></div></div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+
+  el.innerHTML = tableArea('지역별 성과', m.areaMap, areaMax)
+    + tableArea('상품 카테고리별 성과', m.catMap, catMax)
+    + evtHtml
+    + tableArea('출장 여부별 성과', m.bizMap, bizMax)
+    + `<div class="sec-header"><h2>기업별 Top 10 (GMV 기준)</h2><div class="sec-line"></div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>기업명</th><th class="num">전환 건수</th><th class="num">GMV</th><th style="width:120px">비중</th></tr></thead>
+        <tbody>${m.topCompanies.map(([k,v],i)=>{
+          const fmtG = v.gmv >= 1e8 ? (v.gmv/1e8).toFixed(1)+'억' : v.gmv >= 1e4 ? (v.gmv/1e4).toFixed(0)+'만' : v.gmv.toLocaleString();
+          const pct = compMax > 0 ? v.gmv / compMax * 100 : 0;
+          return `<tr><td>${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${k}</td><td class="num">${v.count}</td><td class="num" style="color:#7ee8a2">${fmtG}원</td>
+          <td><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:#f7c948"></div></div></td></tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+}
+
+// ── Claude API call ──
+async function generateReport(m, input) {
+  const fmt = n => n.toLocaleString();
+  const fmtW = n => n >= 1e8 ? (n/1e8).toFixed(1)+'억원' : n >= 1e4 ? (n/1e4).toFixed(0)+'만원' : n.toLocaleString()+'원';
+
+  const prompt = `당신은 B2B OTA 플랫폼(여기어때 기업출장) 마케팅 성과 분석 전문가입니다.
+아래 CRM 캠페인 데이터를 바탕으로 임원 보고용 성과 보고서 초안을 작성해주세요.
+
+## 캠페인 정보
+- 캠페인명: ${input.name}
+- 발송 목적: ${input.purpose}
+- 발송 내용: ${input.content}
+- 쿠폰 번호: ${input.couponNos || '없음'}
+
+## 핵심 지표
+- 발송 건수: ${fmt(m.sendCount)}건
+- 전환 건수: ${fmt(m.convCount)}건
+- 전환율: ${m.convRate.toFixed(2)}%
+- GMV: ${fmtW(m.gmvTotal)}
+- 건당 GMV: ${fmtW(m.gmvPerConv)}
+- 발송 비용: ${fmtW(m.sendCost)} (23.1원/건)
+- 쿠폰 할인 비용: ${m.couponNos.length > 0 ? fmtW(m.couponCost) : '미집계(쿠폰 미입력)'}
+- 총 비용: ${fmtW(m.totalCost)}
+- ROI: ${m.roi !== null ? m.roi.toFixed(1)+'%' : '계산불가'}
+
+## 세그먼트 분석
+지역별 Top3: ${m.areaMap.slice(0,3).map(([k,v])=>`${k}(${fmt(v.count)}건, ${fmtW(v.gmv)})`).join(' / ')}
+카테고리별 Top3: ${m.catMap.slice(0,3).map(([k,v])=>`${k}(${fmt(v.count)}건)`).join(' / ')}
+결제 타입: ${m.eventMap.map(([k,v])=>`${k} ${v}건`).join(', ')}
+출장여부: ${m.bizMap.map(([k,v])=>`${k} ${fmt(v.count)}건`).join(', ')}
+기업 Top3: ${m.topCompanies.slice(0,3).map(([k,v])=>`${k}(${fmtW(v.gmv)})`).join(' / ')}
+
+## 작성 요령
+다음 섹션으로 구성해주세요:
+
+[임원 요약] — 3문장 이내. 핵심 성과·ROI·특이사항만.
+[성과 분석] — 전환율·GMV·ROI에 대한 구체적 해석. 업계 평균 대비 언급 시 추정임을 표기.
+[세그먼트 인사이트] — 지역/카테고리/기업 등에서 발견된 패턴 및 의미.
+[보완점 및 다음 캠페인 제언] — 구체적 액션 아이템 3가지 이상.
+
+보고서 톤: 간결·실무적. 수치 근거 명시. 이모지 사용 금지.`;
+
+  document.getElementById('genStatus').classList.remove('hidden');
+  document.getElementById('loadingBar').classList.remove('hidden');
+  document.getElementById('reportContent').textContent = '';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const evt = JSON.parse(data);
+          if (evt.type === 'content_block_delta' && evt.delta?.text) {
+            document.getElementById('reportContent').textContent += evt.delta.text;
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    document.getElementById('reportContent').textContent = '[오류] API 호출 실패: ' + err.message;
+  } finally {
+    document.getElementById('genStatus').classList.add('hidden');
+    document.getElementById('loadingBar').classList.add('hidden');
+  }
+}
+
+// ── Run ──
+document.getElementById('runBtn').addEventListener('click', run);
+document.getElementById('regenBtn').addEventListener('click', () => {
+  if (lastMetrics && lastInput) generateReport(lastMetrics, lastInput);
+});
+
+async function run() {
+  const m = computeMetrics();
+  lastMetrics = m;
+  lastInput = {
+    name: document.getElementById('campaignName').value.trim(),
+    purpose: document.getElementById('purpose').value,
+    content: document.getElementById('content').value.trim(),
+    couponNos: document.getElementById('couponNos').value.trim(),
+  };
+
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('resultArea').classList.remove('hidden');
+
+  renderKPIs(m);
+  renderSegments(m);
+  await generateReport(m, lastInput);
+}
+
+// ── Copy ──
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = document.getElementById('reportContent').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('보고서가 클립보드에 복사됐습니다'));
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
